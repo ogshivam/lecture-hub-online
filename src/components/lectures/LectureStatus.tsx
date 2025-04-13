@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Lecture, LectureStatus } from '@/types';
+import { Lecture, LectureStatus as LectureStatusType } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
 import { Badge } from '@/components/ui/badge';
 
@@ -10,7 +10,7 @@ interface LectureStatusProps {
 
 const LectureStatus: React.FC<LectureStatusProps> = ({ lecture }) => {
   const { getLectureStatus } = useApi();
-  const [status, setStatus] = useState<LectureStatus>(getLectureStatus(lecture));
+  const [status, setStatus] = useState<LectureStatusType>(getLectureStatus(lecture));
 
   useEffect(() => {
     // Update status every minute

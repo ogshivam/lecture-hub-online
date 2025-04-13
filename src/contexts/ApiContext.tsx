@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Course, Lecture, Week, LectureStatus } from '@/types';
 import { users as mockUsers, courses as mockCourses, lectures as mockLectures, weeks as mockWeeks } from '@/data/mockData';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 interface ApiContextProps {
   users: User[];
