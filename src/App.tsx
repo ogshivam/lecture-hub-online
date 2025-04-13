@@ -14,6 +14,8 @@ import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import LectureDetail from "./pages/LectureDetail";
 import AdminPanel from "./pages/AdminPanel";
+import CourseManagement from "./pages/CourseManagement";
+import LectureManagement from "./pages/LectureManagement";
 import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="/lectures/:id" element={<LectureDetail />} />
             <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/admin/courses/:id" element={<CourseManagement />} />
+            <Route path="/admin/lectures/:id" element={<LectureManagement />} />
             <Route path="/schedule" element={<Schedule />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

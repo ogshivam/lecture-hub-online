@@ -12,7 +12,11 @@ interface ApiContextProps {
   login: (username: string, password: string) => boolean;
   logout: () => void;
   addCourse: (course: Omit<Course, 'id' | 'weeks'>) => Course;
+  updateCourse: (course: Course) => void;
+  deleteCourse: (id: string) => void;
   addWeek: (week: Omit<Week, 'id' | 'lectures'>) => Week;
+  updateWeek: (week: Week) => void;
+  deleteWeek: (id: string) => void;
   addLecture: (lecture: Omit<Lecture, 'id'>) => Lecture;
   updateLecture: (lecture: Lecture) => void;
   deleteLecture: (id: string) => void;
@@ -79,6 +83,34 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newCourse;
   };
 
+  const updateCourse = (updatedCourse: Course) => {
+    setCourses(
+      courses.map((course) =>
+        course.id === updatedCourse.id ? updatedCourse : course
+      )
+    );
+    
+    toast.success(`Course "${updatedCourse.name}" updated successfully!`);
+  };
+
+  const deleteCourse = (id: string) => {
+    const courseToDelete = courses.find((course) => course.id === id);
+    
+    if (!courseToDelete) return;
+    
+    // Delete all weeks and lectures associated with this course
+    const weeksToDelete = weeks.filter(week => week.courseId === id);
+    const lectureIdsToDelete = weeksToDelete.flatMap(week => 
+      week.lectures.map(lecture => lecture.id)
+    );
+    
+    setLectures(lectures.filter(lecture => !lectureIdsToDelete.includes(lecture.id)));
+    setWeeks(weeks.filter(week => week.courseId !== id));
+    setCourses(courses.filter(course => course.id !== id));
+    
+    toast.success(`Course deleted successfully!`);
+  };
+
   const addWeek = (weekData: Omit<Week, 'id' | 'lectures'>) => {
     const newWeek: Week = {
       id: `w${weeks.length + 1}`,
@@ -103,6 +135,58 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     toast.success(`Week "${weekData.name}" added successfully!`);
     return newWeek;
+  };
+
+  const updateWeek = (updatedWeek: Week) => {
+    setWeeks(
+      weeks.map((week) =>
+        week.id === updatedWeek.id ? updatedWeek : week
+      )
+    );
+    
+    // Update courses
+    setCourses(
+      courses.map((course) => {
+        if (course.id === updatedWeek.courseId) {
+          return {
+            ...course,
+            weeks: course.weeks.map((week) =>
+              week.id === updatedWeek.id ? updatedWeek : week
+            ),
+          };
+        }
+        return course;
+      })
+    );
+    
+    toast.success(`Week "${updatedWeek.name}" updated successfully!`);
+  };
+
+  const deleteWeek = (id: string) => {
+    const weekToDelete = weeks.find((week) => week.id === id);
+    
+    if (!weekToDelete) return;
+    
+    // Delete all lectures associated with this week
+    const lectureIdsToDelete = weekToDelete.lectures.map(lecture => lecture.id);
+    
+    setLectures(lectures.filter(lecture => !lectureIdsToDelete.includes(lecture.id)));
+    setWeeks(weeks.filter(week => week.id !== id));
+    
+    // Update courses
+    setCourses(
+      courses.map((course) => {
+        if (course.id === weekToDelete.courseId) {
+          return {
+            ...course,
+            weeks: course.weeks.filter((week) => week.id !== id),
+          };
+        }
+        return course;
+      })
+    );
+    
+    toast.success(`Week deleted successfully!`);
   };
 
   const addLecture = (lectureData: Omit<Lecture, 'id'>) => {
@@ -291,7 +375,11 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         login,
         logout,
         addCourse,
+        updateCourse,
+        deleteCourse,
         addWeek,
+        updateWeek,
+        deleteWeek,
         addLecture,
         updateLecture,
         deleteLecture,

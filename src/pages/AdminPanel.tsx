@@ -152,6 +152,11 @@ const AdminPanel = () => {
                                 <Button asChild variant="outline" size="sm">
                                   <Link to={`/courses/${week.courseId}`}>View Course</Link>
                                 </Button>
+                                <Button asChild variant="ghost" size="sm">
+                                  <Link to={`/admin/courses/${week.courseId}`}>
+                                    Manage
+                                  </Link>
+                                </Button>
                               </div>
                             </CardContent>
                           </Card>
@@ -197,13 +202,15 @@ const AdminPanel = () => {
                                     <Link to={`/lectures/${lecture.id}`}>View</Link>
                                   </Button>
                                   <Button 
+                                    asChild
                                     variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-destructive hover:text-destructive/90"
-                                    onClick={() => deleteLecture(lecture.id)}
+                                    size="sm"
+                                    className="flex items-center gap-1"
                                   >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
+                                    <Link to={`/admin/lectures/${lecture.id}`}>
+                                      <Edit className="h-3.5 w-3.5" />
+                                      Edit
+                                    </Link>
                                   </Button>
                                 </div>
                               </div>
