@@ -109,6 +109,12 @@
   height: 100%;
 }
 
+/* Ensure the parent container can position the overlay correctly */
+.youtube-container {
+  position: relative;
+  overflow: hidden;
+}
+
 .live-badge {
   animation: pulse 2s infinite;
 }
