@@ -69,11 +69,14 @@ const LectureManagement = () => {
       return;
     }
     
+    // Extract YouTube ID from the full share link
+    const extractedYouTubeId = youtubeId.split('/').pop()?.split('?')[0] || youtubeId;
+    
     updateLecture({
       ...lecture,
       title,
       description,
-      youtubeId,
+      youtubeId: extractedYouTubeId, // Use extracted ID
       scheduledTime: new Date(scheduledTime).toISOString()
     });
     
