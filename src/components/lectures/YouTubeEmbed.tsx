@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Lecture } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
@@ -101,7 +100,7 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
     return () => {
-      // Clean up
+      // Clean up event listeners
       containerRef.current?.removeEventListener('contextmenu', preventContextMenu);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
@@ -141,26 +140,27 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     if (!containerRef.current) return;
     
     if (!playerState.fullscreen) {
-      // Enter fullscreen
-      if (containerRef.current.requestFullscreen) {
-        containerRef.current.requestFullscreen();
-      } else if ((containerRef.current as any).webkitRequestFullscreen) {
-        (containerRef.current as any).webkitRequestFullscreen();
-      } else if ((containerRef.current as any).msRequestFullscreen) {
-        (containerRef.current as any).msRequestFullscreen();
-      } else if ((containerRef.current as any).mozRequestFullScreen) {
-        (containerRef.current as any).mozRequestFullScreen();
+      // Enter fullscreen with cross-browser support
+      const container = containerRef.current;
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      } else if (container.msRequestFullscreen) {
+        container.msRequestFullscreen();
+      } else if (container.mozRequestFullScreen) {
+        container.mozRequestFullScreen();
       }
     } else {
-      // Exit fullscreen
+      // Exit fullscreen with cross-browser support
       if (document.exitFullscreen) {
         document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-      } else if ((document as any).msExitFullscreen) {
-        (document as any).msExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen) {
-        (document as any).mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
       }
     }
   };
