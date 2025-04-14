@@ -1,1 +1,8 @@
+
 project_id = "utuwhwpvaqsroafhedwp"
+
+[functions.set-admin]
+verify_jwt = true
+
+[functions.seed-data]
+verify_jwt = true
