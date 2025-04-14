@@ -177,3 +177,18 @@
     opacity: 0.5;
   }
 }
+
+/* Fullscreen styles to ensure controls remain visible */
+.secure-player:fullscreen .player-controls,
+.secure-player:-webkit-full-screen .player-controls,
+.secure-player:-moz-full-screen .player-controls,
+.secure-player:-ms-fullscreen .player-controls {
+  opacity: 0;
+}
+
+.secure-player:fullscreen:hover .player-controls,
+.secure-player:-webkit-full-screen:hover .player-controls,
+.secure-player:-moz-full-screen:hover .player-controls,
+.secure-player:-ms-fullscreen:hover .player-controls {
+  opacity: 1;
+}

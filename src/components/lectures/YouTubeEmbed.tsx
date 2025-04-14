@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Lecture } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
-import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface YouTubeEmbedProps {
@@ -25,10 +25,12 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     playing: boolean;
     muted: boolean;
     loading: boolean;
+    fullscreen: boolean;
   }>({
     playing: false,
     muted: false,
-    loading: true
+    loading: true,
+    fullscreen: false
   });
 
   useEffect(() => {
@@ -80,11 +82,32 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
       return false;
     };
 
+    // Handle fullscreen change events
+    const handleFullscreenChange = () => {
+      const isFullscreen = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      
+      setPlayerState(prev => ({ ...prev, fullscreen: isFullscreen }));
+    };
+
     containerRef.current?.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
     return () => {
       // Clean up
       containerRef.current?.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+      
       if (playerRef.current) {
         playerRef.current.destroy();
       }
@@ -111,6 +134,34 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     } else {
       playerRef.current.mute();
       setPlayerState(prev => ({ ...prev, muted: true }));
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    
+    if (!playerState.fullscreen) {
+      // Enter fullscreen
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen();
+      } else if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen();
+      } else if ((containerRef.current as any).msRequestFullscreen) {
+        (containerRef.current as any).msRequestFullscreen();
+      } else if ((containerRef.current as any).mozRequestFullScreen) {
+        (containerRef.current as any).mozRequestFullScreen();
+      }
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      } else if ((document as any).mozCancelFullScreen) {
+        (document as any).mozCancelFullScreen();
+      }
     }
   };
 
@@ -142,6 +193,16 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
           className="text-white hover:text-white hover:bg-black/20"
         >
           {playerState.muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+        </Button>
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleFullscreen}
+          disabled={playerState.loading}
+          className="text-white hover:text-white hover:bg-black/20"
+        >
+          {playerState.fullscreen ? <Minimize className="h-6 w-6" /> : <Maximize className="h-6 w-6" />}
         </Button>
         
         {status === 'live' && (
