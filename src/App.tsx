@@ -20,6 +20,7 @@ import CourseManagement from "./pages/CourseManagement";
 import LectureManagement from "./pages/LectureManagement";
 import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
+import AdminSetup from "./pages/AdminSetup";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/admin/courses/:id" element={<CourseManagement />} />
               <Route path="/admin/lectures/:id" element={<LectureManagement />} />
               <Route path="/schedule" element={<Schedule />} />
+              <Route path="/admin-setup" element={<AdminSetup />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

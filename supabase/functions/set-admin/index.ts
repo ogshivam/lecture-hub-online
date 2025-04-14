@@ -33,14 +33,14 @@ serve(async (req) => {
       );
     }
 
-    // Find the user with the given email
+    // Find the user by email
     const { data: userData, error: userError } = await supabase
       .from("profiles")
-      .select("*")
+      .select("id")
       .eq("username", email)
       .single();
 
-    if (userError) {
+    if (userError || !userData) {
       return new Response(
         JSON.stringify({ error: "User not found" }),
         {
