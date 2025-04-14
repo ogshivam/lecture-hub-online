@@ -91,6 +91,10 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Disable right-click for the entire site */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
   }
 }
 
@@ -101,6 +105,7 @@
   padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
   height: 0;
   overflow: hidden;
+  pointer-events: none; /* Disable all pointer events by default */
 }
 
 .youtube-container iframe {
@@ -109,6 +114,7 @@
   left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none; /* Important: Disable interactions with iframe */
 }
 
 /* Secure player specific styles */
@@ -136,6 +142,7 @@
   z-index: 10;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: auto; /* Re-enable pointer events for controls */
 }
 
 .secure-player:hover .player-controls {
@@ -147,11 +154,12 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 120px;
+  width: 100%; /* Cover entire player */
   height: 100%;
   background-color: transparent;
   z-index: 5;
   cursor: not-allowed;
+  pointer-events: auto; /* Make sure this overlay catches all events */
 }
 
 /* Live indicator pill */
@@ -192,3 +200,9 @@
 .secure-player:-ms-fullscreen:hover .player-controls {
   opacity: 1;
 }
+
+/* Enable pointer events only for our custom controls */
+.secure-player .player-controls button {
+  pointer-events: auto;
+}
+

@@ -33,6 +33,22 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     fullscreen: false
   });
 
+  // Disable right click globally for the document
+  useEffect(() => {
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add the event listener to the document
+    document.addEventListener('contextmenu', disableContextMenu);
+
+    // Clean up the event listener when component unmounts
+    return () => {
+      document.removeEventListener('contextmenu', disableContextMenu);
+    };
+  }, []);
+
   useEffect(() => {
     // Load YouTube IFrame API
     const tag = document.createElement('script');
@@ -88,14 +104,7 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
       setPlayerState(prev => ({ ...prev, fullscreen: isFullscreen }));
     };
 
-    // Prevent context menu on the player and its container
-    const preventContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      return false;
-    };
-
     // Add event listeners
-    containerRef.current?.addEventListener('contextmenu', preventContextMenu);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -103,7 +112,6 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
 
     return () => {
       // Clean up event listeners
-      containerRef.current?.removeEventListener('contextmenu', preventContextMenu);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);

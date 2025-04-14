@@ -19,6 +19,20 @@ const LectureDetail = () => {
   const [week, setWeek] = useState(course?.weeks.find(w => w.id === lecture?.weekId));
   const [status, setStatus] = useState(lecture ? getLectureStatus(lecture) : null);
 
+  // Prevent context menu globally for this page
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+    
+    document.addEventListener('contextmenu', handleContextMenu);
+    
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
   useEffect(() => {
     // Refresh lecture status every minute
     const interval = setInterval(() => {
@@ -66,7 +80,7 @@ const LectureDetail = () => {
 
   return (
     <MainLayout requireAuth>
-      <div className="space-y-6">
+      <div className="space-y-6" onContextMenu={(e) => e.preventDefault()}>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Button variant="ghost" size="icon" asChild className="h-8 w-8">
             <Link to={`/courses/${course.id}`}>
