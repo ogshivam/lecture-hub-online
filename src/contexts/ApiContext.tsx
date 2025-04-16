@@ -2,6 +2,17 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Course, Lecture, Week, LectureStatus } from '@/types';
 import { users as mockUsers, courses as mockCourses, lectures as mockLectures, weeks as mockWeeks } from '@/data/mockData';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+
+interface Profile {
+  id: string;
+  username: string;
+  is_admin: boolean;
+  referral_code: string;
+  referred_by: string;
+  created_at: string;
+}
 
 interface ApiContextProps {
   users: User[];
@@ -46,6 +57,38 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsAuthenticated(true);
       setIsAdmin(user.role === 'admin');
     }
+    
+    // Check for Supabase session
+    const checkSupabaseSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // If user is coming from a Supabase auth session, we can consider them authenticated
+        // In a real implementation, we would fetch their profile data from Supabase
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (!error && profileData) {
+          const profile = profileData as Profile;
+          
+          // Create a user object from the profile
+          const supaUser: User = {
+            id: profile.id,
+            username: profile.username || session.user.email || '',
+            password: '', // We don't store or use passwords with Supabase auth
+            role: profile.is_admin ? 'admin' : 'user'
+          };
+          
+          setCurrentUser(supaUser);
+          setIsAuthenticated(true);
+          setIsAdmin(profile.is_admin);
+        }
+      }
+    };
+    
+    checkSupabaseSession();
   }, []);
 
   const login = (username: string, password: string) => {
@@ -69,6 +112,8 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsAuthenticated(false);
     setIsAdmin(false);
     localStorage.removeItem('currentUser');
+    // Also sign out from Supabase if authenticated there
+    supabase.auth.signOut();
   };
 
   const addCourse = (courseData: Omit<Course, 'id' | 'weeks'>) => {
