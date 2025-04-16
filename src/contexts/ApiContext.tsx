@@ -1,9 +1,18 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Course, Lecture, Week, LectureStatus } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import { Tables } from '@/integrations/supabase/types';
+
+interface RelationshipManager {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+type Profile = Tables<'public', 'profiles'>
 
 interface ApiContextProps {
   courses: Course[];
@@ -25,6 +34,9 @@ interface ApiContextProps {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
+  relationshipManagers: RelationshipManager[];
+  rmClients: Record<string, Profile[]>;
+  addRelationshipManager: (data: { name: string; email: string }) => Promise<void>;
 }
 
 const ApiContext = createContext<ApiContextProps | undefined>(undefined);
@@ -35,6 +47,8 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [weeks, setWeeks] = useState<Week[]>([]);
   const { user, isAdmin, signOut, isLoading } = useAuth();
   const isAuthenticated = !!user;
+  const [relationshipManagers, setRelationshipManagers] = useState<RelationshipManager[]>([]);
+  const [rmClients, setRmClients] = useState<Record<string, Profile[]>>({});
 
   // Fetch data when authentication state changes
   useEffect(() => {
@@ -49,6 +63,13 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setLectures([]);
     }
   }, [isAuthenticated]);
+
+  // Add this useEffect to fetch RMs when authenticated
+  useEffect(() => {
+    if (isAuthenticated && isAdmin) {
+      fetchRelationshipManagers();
+    }
+  }, [isAuthenticated, isAdmin]);
 
   const fetchCourses = async () => {
     try {
@@ -128,6 +149,39 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) {
       console.error('Error fetching lectures:', error);
       toast.error('Failed to load lectures');
+    }
+  };
+
+  const fetchRelationshipManagers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relationship_managers')
+        .select('*')
+        .order('name');
+        
+      if (error) throw error;
+      
+      setRelationshipManagers(data);
+      
+      // Fetch clients for each RM
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .not('referred_by', 'is', null);
+        
+      if (profilesError) throw profilesError;
+      
+      const clientsByRM = profiles.reduce((acc: Record<string, Profile[]>, profile) => {
+        if (profile.referred_by) {
+          acc[profile.referred_by] = [...(acc[profile.referred_by] || []), profile];
+        }
+        return acc;
+      }, {});
+      
+      setRmClients(clientsByRM);
+    } catch (error) {
+      console.error('Error fetching relationship managers:', error);
+      toast.error('Failed to load relationship managers');
     }
   };
 
@@ -606,6 +660,21 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const addRelationshipManager = async (data: { name: string; email: string }) => {
+    try {
+      const { error } = await supabase
+        .from('relationship_managers')
+        .insert([data]);
+        
+      if (error) throw error;
+      
+      await fetchRelationshipManagers();
+    } catch (error: any) {
+      console.error('Error adding relationship manager:', error);
+      throw new Error(error.message || 'Failed to add relationship manager');
+    }
+  };
+
   return (
     <ApiContext.Provider
       value={{
@@ -628,6 +697,9 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         isAuthenticated,
         isAdmin,
         isLoading,
+        relationshipManagers,
+        rmClients,
+        addRelationshipManager,
       }}
     >
       {children}

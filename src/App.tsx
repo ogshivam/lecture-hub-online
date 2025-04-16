@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +20,7 @@ import LectureManagement from "./pages/LectureManagement";
 import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
 import AdminSetup from "./pages/AdminSetup";
+import RMManagement from "./pages/RMManagement";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +45,7 @@ const App = () => (
               <Route path="/admin/lectures/:id" element={<LectureManagement />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/admin-setup" element={<AdminSetup />} />
+              <Route path="/admin/relationship-managers" element={<RMManagement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,18 +34,35 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+  
+  useEffect(() => {
+    // Get referral code from URL if present
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('referral_code', ref);
+    }
+  }, []);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const referralCode = localStorage.getItem('referral_code');
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            referral_code: referralCode,
+          },
+        },
       });
       
       if (error) throw error;
       toast.success('Registration successful! Please check your email for verification.');
+      localStorage.removeItem('referral_code'); // Clear the referral code
     } catch (error) {
       toast.error(error.message);
     } finally {

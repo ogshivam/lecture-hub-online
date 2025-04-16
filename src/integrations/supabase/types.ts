@@ -83,19 +83,54 @@ export type Database = {
           created_at: string
           id: string
           is_admin: boolean | null
+          referral_code: string | null
+          referred_by: string | null
           username: string | null
         }
         Insert: {
           created_at?: string
           id: string
           is_admin?: boolean | null
+          referral_code?: string | null
+          referred_by?: string | null
           username?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           is_admin?: boolean | null
+          referral_code?: string | null
+          referred_by?: string | null
           username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "relationship_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_managers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
