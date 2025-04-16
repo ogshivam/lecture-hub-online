@@ -19,8 +19,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check if we're in development mode and need direct admin access
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   useEffect(() => {
-    // Get initial session
+    // For development mode, if the URL contains '/admin', we'll auto-set admin privileges
+    const handleDirectAdminAccess = () => {
+      if (isDevelopment && window.location.pathname.includes('/admin')) {
+        // Set admin = true when in development environment and accessing admin routes
+        setIsAdmin(true);
+        setIsLoading(false);
+        return true;
+      }
+      return false;
+    };
+
+    // Try handling direct admin access first
+    if (handleDirectAdminAccess()) {
+      return; // Skip regular auth if we're doing direct admin access
+    }
+
+    // Regular authentication flow (for non-admin routes or production)
     setIsLoading(true);
     
     // Set up auth state listener FIRST
@@ -52,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isDevelopment]);
 
   const fetchAdminStatus = async (userId: string) => {
     try {

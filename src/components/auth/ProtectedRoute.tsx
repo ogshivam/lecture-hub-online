@@ -13,6 +13,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   adminOnly = false 
 }) => {
   const { user, isAdmin, isLoading } = useAuth();
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // For development, allow direct access to admin routes
+  if (isDevelopment && window.location.pathname.includes('/admin')) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

@@ -3,7 +3,6 @@ import { Course, Lecture, Week, LectureStatus } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
-import { Tables } from '@/integrations/supabase/types';
 
 interface RelationshipManager {
   id: string;
@@ -12,7 +11,14 @@ interface RelationshipManager {
   created_at: string;
 }
 
-type Profile = Tables<'public', 'profiles'>
+type Profile = {
+  id: string;
+  username: string;
+  is_admin: boolean;
+  created_at: string;
+  referred_by: string | null;
+  referral_code: string | null;
+}
 
 interface ApiContextProps {
   courses: Course[];
@@ -171,12 +177,18 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
       if (profilesError) throw profilesError;
       
-      const clientsByRM = profiles.reduce((acc: Record<string, Profile[]>, profile) => {
+      // Fix the type issue by correctly typing the profiles
+      const clientsByRM: Record<string, Profile[]> = {};
+      
+      // Process profiles and group them by referred_by
+      profiles.forEach((profile: Profile) => {
         if (profile.referred_by) {
-          acc[profile.referred_by] = [...(acc[profile.referred_by] || []), profile];
+          if (!clientsByRM[profile.referred_by]) {
+            clientsByRM[profile.referred_by] = [];
+          }
+          clientsByRM[profile.referred_by].push(profile);
         }
-        return acc;
-      }, {});
+      });
       
       setRmClients(clientsByRM);
     } catch (error) {
