@@ -2,13 +2,11 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, BookOpen } from 'lucide-react';
+import { LogOut, BookOpen, Video } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, isAdmin, currentUser, logout } = useApi();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -45,7 +43,7 @@ const Navbar: React.FC = () => {
             <>
               <div className="hidden md:block">
                 <span className="text-sm font-medium">
-                  {isAdmin ? 'Admin' : 'Student'}: {user?.email}
+                  {currentUser?.role === 'admin' ? 'Admin' : 'Student'}: {currentUser?.username}
                 </span>
               </div>
               <Button variant="ghost" size="icon" onClick={handleLogout}>
@@ -54,7 +52,7 @@ const Navbar: React.FC = () => {
               </Button>
             </>
           ) : (
-            <Button variant="default" onClick={() => navigate('/auth')}>
+            <Button variant="default" onClick={() => navigate('/login')}>
               Sign In
             </Button>
           )}

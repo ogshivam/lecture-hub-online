@@ -2,53 +2,77 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { BookOpen, Video, Users } from 'lucide-react';
+import MainLayout from '@/components/layout/MainLayout';
+import { useApi } from '@/contexts/ApiContext';
 
 const Index = () => {
-  const { user } = useAuth();
+  const { isAuthenticated } = useApi();
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="bg-background border-b">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-xl text-primary">
-            <span>LectureHub</span>
-          </div>
-          <Button asChild>
-            <Link to={user ? "/dashboard" : "/auth"}>
-              {user ? "Go to Dashboard" : "Sign In"}
-            </Link>
-          </Button>
-        </div>
-      </header>
-      <main className="flex-1 grid place-items-center">
-        <div className="container mx-auto px-4 text-center space-y-8 py-16">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            Welcome to LectureHub
+    <MainLayout>
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <div className="space-y-3 max-w-3xl">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl text-education-primary">
+            Online Coaching Lecture Platform
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Access live and recorded lectures from your educational courses
+          <p className="text-lg text-muted-foreground mb-8">
+            Securely access live and recorded lectures for your courses
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button asChild size="lg">
-              <Link to={user ? "/dashboard" : "/auth"}>
-                {user ? "Go to Dashboard" : "Get Started"}
-              </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-12 w-full max-w-5xl">
+          <Card className="border-2 border-education-primary/10">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+              <div className="p-3 rounded-full bg-education-light text-education-primary">
+                <BookOpen className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Structured Courses</h3>
+              <p className="text-muted-foreground">
+                Organized by weeks with clear progression to help you master the material
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-2 border-education-primary/10">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+              <div className="p-3 rounded-full bg-education-light text-education-secondary">
+                <Video className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Live & Recorded Lectures</h3>
+              <p className="text-muted-foreground">
+                Attend live sessions with real-time chat or watch recordings at your convenience
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-2 border-education-primary/10">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+              <div className="p-3 rounded-full bg-education-light text-education-accent">
+                <Users className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Interactive Learning</h3>
+              <p className="text-muted-foreground">
+                Engage directly with instructors through YouTube Live Chat during sessions
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          {isAuthenticated ? (
+            <Button asChild size="lg" className="text-lg py-6 px-8">
+              <Link to="/dashboard">Go to Dashboard</Link>
             </Button>
-            {!user && (
-              <Button asChild variant="outline" size="lg">
-                <Link to="/auth?tab=signup">Create Account</Link>
-              </Button>
-            )}
-          </div>
+          ) : (
+            <Button asChild size="lg" className="text-lg py-6 px-8">
+              <Link to="/login">Get Started</Link>
+            </Button>
+          )}
         </div>
-      </main>
-      <footer className="border-t py-6 md:py-8">
-        <div className="container text-center text-sm text-muted-foreground">
-          LectureHub &copy; {new Date().getFullYear()}
-        </div>
-      </footer>
-    </div>
+      </div>
+    </MainLayout>
   );
 };
 

@@ -1,40 +1,31 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useApi } from '@/contexts/ApiContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useApi();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
+    if (login(username, password)) {
       toast.success('Login successful!');
       setTimeout(() => {
         navigate('/dashboard');
       }, 500);
-    } catch (error: any) {
-      toast.error(error.message || 'Invalid email or password');
-    } finally {
+    } else {
+      toast.error('Invalid username or password');
       setIsLoading(false);
     }
   };
@@ -50,13 +41,12 @@ const LoginForm: React.FC = () => {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="username"
+              placeholder="admin or user"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
           </div>
@@ -72,7 +62,7 @@ const LoginForm: React.FC = () => {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Use your Supabase account credentials to log in
+            Hint: Use "admin" / "admin" for admin access or "user" / "user" for student access
           </p>
         </CardContent>
         <CardFooter>

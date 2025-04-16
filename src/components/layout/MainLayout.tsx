@@ -1,42 +1,41 @@
 
-import React, { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
 import Navbar from './Navbar';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useApi } from '@/contexts/ApiContext';
+import { Navigate } from 'react-router-dom';
 
 interface MainLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
   requireAuth?: boolean;
   adminOnly?: boolean;
 }
 
-const MainLayout = ({ 
+const MainLayout: React.FC<MainLayoutProps> = ({ 
   children, 
-  requireAuth = false, 
-  adminOnly = false 
-}: MainLayoutProps) => {
-  const location = useLocation();
-  
-  // Determine if we should apply padding for sidebar
-  const withSidebar = location.pathname.includes('/admin');
+  requireAuth = false,
+  adminOnly = false
+}) => {
+  const { isAuthenticated, isAdmin } = useApi();
 
-  // For auth-required routes, wrap with ProtectedRoute
-  const content = requireAuth ? (
-    <ProtectedRoute adminOnly={adminOnly}>
-      {children}
-    </ProtectedRoute>
-  ) : (
-    children
-  );
+  if (requireAuth && !isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/dashboard" />;
+  }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className={`flex-1 ${withSidebar ? 'md:ml-64' : ''}`}>
-        <main className="container py-6 md:py-8">
-          {content}
-        </main>
-      </div>
+      <main className="flex-1 container py-6">
+        {children}
+      </main>
+      <footer className="py-6 border-t">
+        <div className="container text-center text-sm text-muted-foreground">
+          &copy; {new Date().getFullYear()} Online Coaching Platform Prototype
+        </div>
+      </footer>
     </div>
   );
 };
