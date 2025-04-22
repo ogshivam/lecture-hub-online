@@ -1,10 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 50% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -13,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 210 100% 35%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 181 85% 26%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -97,5 +91,118 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Disable right-click for the entire site */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
   }
 }
+
+/* YouTube Secure Player Styles */
+.youtube-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  height: 0;
+  overflow: hidden;
+  pointer-events: none; /* Disable all pointer events by default */
+}
+
+.youtube-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Important: Disable interactions with iframe */
+}
+
+/* Secure player specific styles */
+.secure-player #youtube-player,
+.secure-player iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Player controls overlay */
+.player-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: auto; /* Re-enable pointer events for controls */
+}
+
+.secure-player:hover .player-controls {
+  opacity: 1;
+}
+
+/* Protection overlay to prevent interactions with YouTube elements */
+.protection-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%; /* Cover entire player */
+  height: 100%;
+  background-color: transparent;
+  z-index: 5;
+  cursor: not-allowed;
+  pointer-events: auto; /* Make sure this overlay catches all events */
+}
+
+/* Live indicator pill */
+.live-indicator {
+  background-color: #f00;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  animation: pulse 2s infinite;
+}
+
+.live-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Fullscreen styles to ensure controls remain visible */
+.secure-player:fullscreen .player-controls,
+.secure-player:-webkit-full-screen .player-controls,
+.secure-player:-moz-full-screen .player-controls,
+.secure-player:-ms-fullscreen .player-controls {
+  opacity: 0;
+}
+
+.secure-player:fullscreen:hover .player-controls,
+.secure-player:-webkit-full-screen:hover .player-controls,
+.secure-player:-moz-full-screen:hover .player-controls,
+.secure-player:-ms-fullscreen:hover .player-controls {
+  opacity: 1;
+}
+
+/* Enable pointer events only for our custom controls */
+.secure-player .player-controls button {
+  pointer-events: auto;
+}
+
