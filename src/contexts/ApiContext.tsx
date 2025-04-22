@@ -1,375 +1,638 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Course, Lecture, Week, LectureStatus } from '@/types';
-import { users as mockUsers, courses as mockCourses, lectures as mockLectures, weeks as mockWeeks } from '@/data/mockData';
+import { Course, Lecture, Week, LectureStatus } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
+import { useAuth } from './AuthContext';
 
-interface Profile {
+interface RelationshipManager {
   id: string;
-  username: string;
-  is_admin: boolean;
-  referral_code: string;
-  referred_by: string;
+  name: string;
+  email: string;
   created_at: string;
 }
 
+type Profile = {
+  id: string;
+  username: string;
+  is_admin: boolean;
+  created_at: string;
+  referred_by: string | null;
+  referral_code: string | null;
+}
+
 interface ApiContextProps {
-  users: User[];
   courses: Course[];
   lectures: Lecture[];
   weeks: Week[];
-  currentUser: User | null;
-  login: (username: string, password: string) => boolean;
+  currentUser: any;
   logout: () => void;
-  addCourse: (course: Omit<Course, 'id' | 'weeks'>) => Course;
-  updateCourse: (course: Course) => void;
-  deleteCourse: (id: string) => void;
-  addWeek: (week: Omit<Week, 'id' | 'lectures'>) => Week;
-  updateWeek: (week: Week) => void;
-  deleteWeek: (id: string) => void;
-  addLecture: (lecture: Omit<Lecture, 'id'>) => Lecture;
-  updateLecture: (lecture: Lecture) => void;
-  deleteLecture: (id: string) => void;
+  addCourse: (course: Omit<Course, 'id' | 'weeks'>) => Promise<Course | null>;
+  updateCourse: (course: Course) => Promise<void>;
+  deleteCourse: (id: string) => Promise<void>;
+  addWeek: (week: Omit<Week, 'id' | 'lectures'>) => Promise<Week | null>;
+  updateWeek: (week: Week) => Promise<void>;
+  deleteWeek: (id: string) => Promise<void>;
+  addLecture: (lecture: Omit<Lecture, 'id'>) => Promise<Lecture | null>;
+  updateLecture: (lecture: Lecture) => Promise<void>;
+  deleteLecture: (id: string) => Promise<void>;
   getLectureStatus: (lecture: Lecture) => LectureStatus;
   getTimeUntilLecture: (lecture: Lecture) => string;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
+  relationshipManagers: RelationshipManager[];
+  rmClients: Record<string, Profile[]>;
+  addRelationshipManager: (data: { name: string; email: string }) => Promise<void>;
 }
 
 const ApiContext = createContext<ApiContextProps | undefined>(undefined);
 
 export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [courses, setCourses] = useState<Course[]>(mockCourses);
-  const [lectures, setLectures] = useState<Lecture[]>(mockLectures);
-  const [weeks, setWeeks] = useState<Week[]>(mockWeeks);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [lectures, setLectures] = useState<Lecture[]>([]);
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const { user, isAdmin, signOut, isLoading } = useAuth();
+  const isAuthenticated = !!user;
+  const [relationshipManagers, setRelationshipManagers] = useState<RelationshipManager[]>([]);
+  const [rmClients, setRmClients] = useState<Record<string, Profile[]>>({});
 
-  // Check for existing session on mount
+  // Fetch data when authentication state changes
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setIsAdmin(user.role === 'admin');
+    if (isAuthenticated) {
+      fetchCourses();
+      fetchWeeks();
+      fetchLectures();
+    } else {
+      // Clear data when logged out
+      setCourses([]);
+      setWeeks([]);
+      setLectures([]);
     }
-    
-    // Check for Supabase session
-    const checkSupabaseSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // If user is coming from a Supabase auth session, we can consider them authenticated
-        // In a real implementation, we would fetch their profile data from Supabase
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (!error && profileData) {
-          const profile = profileData as Profile;
-          
-          // Create a user object from the profile
-          const supaUser: User = {
-            id: profile.id,
-            username: profile.username || session.user.email || '',
-            password: '', // We don't store or use passwords with Supabase auth
-            role: profile.is_admin ? 'admin' : 'user'
-          };
-          
-          setCurrentUser(supaUser);
-          setIsAuthenticated(true);
-          setIsAdmin(profile.is_admin);
-        }
+  }, [isAuthenticated]);
+
+  // Add this useEffect to fetch RMs when authenticated
+  useEffect(() => {
+    if (isAuthenticated && isAdmin) {
+      fetchRelationshipManagers();
+    }
+  }, [isAuthenticated, isAdmin]);
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        throw error;
       }
-    };
-    
-    checkSupabaseSession();
-  }, []);
-
-  const login = (username: string, password: string) => {
-    const user = users.find(
-      (u) => u.username === username && u.password === password
-    );
-
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setIsAdmin(user.role === 'admin');
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      return true;
+      
+      const formattedCourses = data.map(course => ({
+        ...course,
+        id: course.id,
+        name: course.name,
+        description: course.description,
+        weeks: [], // Will be populated later
+      }));
+      
+      setCourses(formattedCourses);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      toast.error('Failed to load courses');
     }
-    
-    return false;
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    localStorage.removeItem('currentUser');
-    // Also sign out from Supabase if authenticated there
-    supabase.auth.signOut();
+  const fetchWeeks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('weeks')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        throw error;
+      }
+      
+      const formattedWeeks = data.map(week => ({
+        ...week,
+        id: week.id,
+        name: week.name,
+        courseId: week.course_id,
+        lectures: [], // Will be populated later
+      }));
+      
+      setWeeks(formattedWeeks);
+    } catch (error) {
+      console.error('Error fetching weeks:', error);
+      toast.error('Failed to load weeks');
+    }
   };
 
-  const addCourse = (courseData: Omit<Course, 'id' | 'weeks'>) => {
-    const newCourse: Course = {
-      id: `c${courses.length + 1}`,
-      ...courseData,
-      weeks: [],
-    };
-
-    setCourses([...courses, newCourse]);
-    toast.success(`Course "${courseData.name}" added successfully!`);
-    return newCourse;
+  const fetchLectures = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('lectures')
+        .select('*')
+        .order('scheduled_time');
+        
+      if (error) {
+        throw error;
+      }
+      
+      const formattedLectures = data.map(lecture => ({
+        ...lecture,
+        id: lecture.id,
+        courseId: lecture.course_id,
+        weekId: lecture.week_id,
+        title: lecture.title,
+        youtubeId: lecture.youtube_id,
+        scheduledTime: lecture.scheduled_time,
+        description: lecture.description,
+      }));
+      
+      setLectures(formattedLectures);
+    } catch (error) {
+      console.error('Error fetching lectures:', error);
+      toast.error('Failed to load lectures');
+    }
   };
 
-  const updateCourse = (updatedCourse: Course) => {
-    setCourses(
-      courses.map((course) =>
-        course.id === updatedCourse.id ? updatedCourse : course
-      )
-    );
-    
-    toast.success(`Course "${updatedCourse.name}" updated successfully!`);
-  };
-
-  const deleteCourse = (id: string) => {
-    const courseToDelete = courses.find((course) => course.id === id);
-    
-    if (!courseToDelete) return;
-    
-    // Delete all weeks and lectures associated with this course
-    const weeksToDelete = weeks.filter(week => week.courseId === id);
-    const lectureIdsToDelete = weeksToDelete.flatMap(week => 
-      week.lectures.map(lecture => lecture.id)
-    );
-    
-    setLectures(lectures.filter(lecture => !lectureIdsToDelete.includes(lecture.id)));
-    setWeeks(weeks.filter(week => week.courseId !== id));
-    setCourses(courses.filter(course => course.id !== id));
-    
-    toast.success(`Course deleted successfully!`);
-  };
-
-  const addWeek = (weekData: Omit<Week, 'id' | 'lectures'>) => {
-    const newWeek: Week = {
-      id: `w${weeks.length + 1}`,
-      ...weekData,
-      lectures: [],
-    };
-
-    setWeeks([...weeks, newWeek]);
-    
-    // Update courses with new week
-    setCourses(
-      courses.map((course) => {
-        if (course.id === weekData.courseId) {
-          return {
-            ...course,
-            weeks: [...course.weeks, newWeek],
-          };
+  const fetchRelationshipManagers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relationship_managers')
+        .select('*')
+        .order('name');
+        
+      if (error) throw error;
+      
+      setRelationshipManagers(data);
+      
+      // Fetch clients for each RM
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .not('referred_by', 'is', null);
+        
+      if (profilesError) throw profilesError;
+      
+      // Fix the type issue by correctly typing the profiles
+      const clientsByRM: Record<string, Profile[]> = {};
+      
+      // Process profiles and group them by referred_by
+      profiles.forEach((profile: Profile) => {
+        if (profile.referred_by) {
+          if (!clientsByRM[profile.referred_by]) {
+            clientsByRM[profile.referred_by] = [];
+          }
+          clientsByRM[profile.referred_by].push(profile);
         }
-        return course;
-      })
-    );
-    
-    toast.success(`Week "${weekData.name}" added successfully!`);
-    return newWeek;
+      });
+      
+      setRmClients(clientsByRM);
+    } catch (error) {
+      console.error('Error fetching relationship managers:', error);
+      toast.error('Failed to load relationship managers');
+    }
   };
 
-  const updateWeek = (updatedWeek: Week) => {
-    setWeeks(
-      weeks.map((week) =>
-        week.id === updatedWeek.id ? updatedWeek : week
-      )
-    );
-    
-    // Update courses
-    setCourses(
-      courses.map((course) => {
-        if (course.id === updatedWeek.courseId) {
-          return {
-            ...course,
-            weeks: course.weeks.map((week) =>
-              week.id === updatedWeek.id ? updatedWeek : week
-            ),
-          };
-        }
-        return course;
-      })
-    );
-    
-    toast.success(`Week "${updatedWeek.name}" updated successfully!`);
+  // Update the course objects with their related weeks and lectures
+  useEffect(() => {
+    if (courses.length && weeks.length && lectures.length) {
+      // First, add lectures to their corresponding weeks
+      const updatedWeeks = weeks.map(week => {
+        const weekLectures = lectures.filter(lecture => lecture.weekId === week.id);
+        return { ...week, lectures: weekLectures };
+      });
+      
+      setWeeks(updatedWeeks);
+      
+      // Then, add weeks to their corresponding courses
+      const updatedCourses = courses.map(course => {
+        const courseWeeks = updatedWeeks.filter(week => week.courseId === course.id);
+        return { ...course, weeks: courseWeeks };
+      });
+      
+      setCourses(updatedCourses);
+    }
+  }, [courses, weeks, lectures]);
+
+  const logout = async () => {
+    await signOut();
   };
 
-  const deleteWeek = (id: string) => {
-    const weekToDelete = weeks.find((week) => week.id === id);
-    
-    if (!weekToDelete) return;
-    
-    // Delete all lectures associated with this week
-    const lectureIdsToDelete = weekToDelete.lectures.map(lecture => lecture.id);
-    
-    setLectures(lectures.filter(lecture => !lectureIdsToDelete.includes(lecture.id)));
-    setWeeks(weeks.filter(week => week.id !== id));
-    
-    // Update courses
-    setCourses(
-      courses.map((course) => {
-        if (course.id === weekToDelete.courseId) {
-          return {
-            ...course,
-            weeks: course.weeks.filter((week) => week.id !== id),
-          };
-        }
-        return course;
-      })
-    );
-    
-    toast.success(`Week deleted successfully!`);
+  const addCourse = async (courseData: Omit<Course, 'id' | 'weeks'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .insert([
+          { name: courseData.name, description: courseData.description }
+        ])
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      const newCourse: Course = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        weeks: [],
+      };
+      
+      setCourses(prev => [...prev, newCourse]);
+      toast.success(`Course "${courseData.name}" added successfully!`);
+      return newCourse;
+    } catch (error) {
+      console.error('Error adding course:', error);
+      toast.error('Failed to add course');
+      return null;
+    }
   };
 
-  const addLecture = (lectureData: Omit<Lecture, 'id'>) => {
-    const newLecture: Lecture = {
-      id: `l${lectures.length + 1}`,
-      ...lectureData,
-    };
-
-    setLectures([...lectures, newLecture]);
-    
-    // Update weeks with new lecture
-    setWeeks(
-      weeks.map((week) => {
-        if (week.id === lectureData.weekId) {
-          return {
-            ...week,
-            lectures: [...week.lectures, newLecture],
-          };
-        }
-        return week;
-      })
-    );
-    
-    // Update courses
-    setCourses(
-      courses.map((course) => {
-        if (course.id === lectureData.courseId) {
-          return {
-            ...course,
-            weeks: course.weeks.map((week) => {
-              if (week.id === lectureData.weekId) {
-                return {
-                  ...week,
-                  lectures: [...week.lectures, newLecture],
-                };
-              }
-              return week;
-            }),
-          };
-        }
-        return course;
-      })
-    );
-    
-    toast.success(`Lecture "${lectureData.title}" added successfully!`);
-    return newLecture;
+  const updateCourse = async (updatedCourse: Course) => {
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .update({
+          name: updatedCourse.name,
+          description: updatedCourse.description
+        })
+        .eq('id', updatedCourse.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setCourses(prev =>
+        prev.map(course => course.id === updatedCourse.id ? 
+          { ...updatedCourse, weeks: course.weeks } : course
+        )
+      );
+      
+      toast.success(`Course "${updatedCourse.name}" updated successfully!`);
+    } catch (error) {
+      console.error('Error updating course:', error);
+      toast.error('Failed to update course');
+    }
   };
 
-  const updateLecture = (updatedLecture: Lecture) => {
-    setLectures(
-      lectures.map((lecture) =>
-        lecture.id === updatedLecture.id ? updatedLecture : lecture
-      )
-    );
-    
-    // Update weeks
-    setWeeks(
-      weeks.map((week) => {
-        if (week.id === updatedLecture.weekId) {
-          return {
-            ...week,
-            lectures: week.lectures.map((lecture) =>
-              lecture.id === updatedLecture.id ? updatedLecture : lecture
-            ),
-          };
-        }
-        return week;
-      })
-    );
-    
-    // Update courses
-    setCourses(
-      courses.map((course) => {
-        if (course.id === updatedLecture.courseId) {
-          return {
-            ...course,
-            weeks: course.weeks.map((week) => {
-              if (week.id === updatedLecture.weekId) {
-                return {
-                  ...week,
-                  lectures: week.lectures.map((lecture) =>
-                    lecture.id === updatedLecture.id ? updatedLecture : lecture
-                  ),
-                };
-              }
-              return week;
-            }),
-          };
-        }
-        return course;
-      })
-    );
-    
-    toast.success(`Lecture "${updatedLecture.title}" updated successfully!`);
+  const deleteCourse = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setCourses(prev => prev.filter(course => course.id !== id));
+      
+      // Since we have CASCADE deletes in the database, we should also update our local state
+      const weekIds = weeks.filter(week => week.courseId === id).map(week => week.id);
+      setWeeks(prev => prev.filter(week => !weekIds.includes(week.id)));
+      setLectures(prev => prev.filter(lecture => lecture.courseId !== id));
+      
+      toast.success('Course deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      toast.error('Failed to delete course');
+    }
   };
 
-  const deleteLecture = (id: string) => {
-    const lectureToDelete = lectures.find((lecture) => lecture.id === id);
-    
-    if (!lectureToDelete) return;
-    
-    setLectures(lectures.filter((lecture) => lecture.id !== id));
-    
-    // Update weeks
-    setWeeks(
-      weeks.map((week) => {
-        if (week.id === lectureToDelete.weekId) {
-          return {
-            ...week,
-            lectures: week.lectures.filter((lecture) => lecture.id !== id),
-          };
-        }
-        return week;
-      })
-    );
-    
-    // Update courses
-    setCourses(
-      courses.map((course) => {
-        if (course.id === lectureToDelete.courseId) {
-          return {
-            ...course,
-            weeks: course.weeks.map((week) => {
-              if (week.id === lectureToDelete.weekId) {
-                return {
-                  ...week,
-                  lectures: week.lectures.filter((lecture) => lecture.id !== id),
-                };
-              }
-              return week;
-            }),
-          };
-        }
-        return course;
-      })
-    );
-    
-    toast.success(`Lecture deleted successfully!`);
+  const addWeek = async (weekData: Omit<Week, 'id' | 'lectures'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('weeks')
+        .insert([
+          { name: weekData.name, course_id: weekData.courseId }
+        ])
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      const newWeek: Week = {
+        id: data.id,
+        name: data.name,
+        courseId: data.course_id,
+        lectures: [],
+      };
+      
+      setWeeks(prev => [...prev, newWeek]);
+      
+      // Update the course with the new week
+      setCourses(prev =>
+        prev.map(course => {
+          if (course.id === weekData.courseId) {
+            return {
+              ...course,
+              weeks: [...course.weeks, newWeek],
+            };
+          }
+          return course;
+        })
+      );
+      
+      toast.success(`Week "${weekData.name}" added successfully!`);
+      return newWeek;
+    } catch (error) {
+      console.error('Error adding week:', error);
+      toast.error('Failed to add week');
+      return null;
+    }
+  };
+
+  const updateWeek = async (updatedWeek: Week) => {
+    try {
+      const { error } = await supabase
+        .from('weeks')
+        .update({ name: updatedWeek.name })
+        .eq('id', updatedWeek.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update weeks state
+      setWeeks(prev =>
+        prev.map(week => week.id === updatedWeek.id ? 
+          { ...updatedWeek, lectures: week.lectures } : week
+        )
+      );
+      
+      // Update courses state
+      setCourses(prev =>
+        prev.map(course => {
+          if (course.id === updatedWeek.courseId) {
+            return {
+              ...course,
+              weeks: course.weeks.map(week => 
+                week.id === updatedWeek.id ? 
+                { ...updatedWeek, lectures: week.lectures } : week
+              ),
+            };
+          }
+          return course;
+        })
+      );
+      
+      toast.success(`Week "${updatedWeek.name}" updated successfully!`);
+    } catch (error) {
+      console.error('Error updating week:', error);
+      toast.error('Failed to update week');
+    }
+  };
+
+  const deleteWeek = async (id: string) => {
+    try {
+      // Find the week before deleting it
+      const weekToDelete = weeks.find(week => week.id === id);
+      if (!weekToDelete) return;
+      
+      const { error } = await supabase
+        .from('weeks')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update weeks state
+      setWeeks(prev => prev.filter(week => week.id !== id));
+      
+      // Update lectures state (since we have CASCADE deletes)
+      const lectureIds = weekToDelete.lectures.map(lecture => lecture.id);
+      setLectures(prev => prev.filter(lecture => !lectureIds.includes(lecture.id)));
+      
+      // Update courses state
+      setCourses(prev =>
+        prev.map(course => {
+          if (course.id === weekToDelete.courseId) {
+            return {
+              ...course,
+              weeks: course.weeks.filter(week => week.id !== id),
+            };
+          }
+          return course;
+        })
+      );
+      
+      toast.success(`Week deleted successfully!`);
+    } catch (error) {
+      console.error('Error deleting week:', error);
+      toast.error('Failed to delete week');
+    }
+  };
+
+  const addLecture = async (lectureData: Omit<Lecture, 'id'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('lectures')
+        .insert([
+          {
+            course_id: lectureData.courseId,
+            week_id: lectureData.weekId,
+            title: lectureData.title,
+            youtube_id: lectureData.youtubeId,
+            scheduled_time: lectureData.scheduledTime,
+            description: lectureData.description,
+          }
+        ])
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      const newLecture: Lecture = {
+        id: data.id,
+        courseId: data.course_id,
+        weekId: data.week_id,
+        title: data.title,
+        youtubeId: data.youtube_id,
+        scheduledTime: data.scheduled_time,
+        description: data.description,
+      };
+      
+      // Update lectures state
+      setLectures(prev => [...prev, newLecture]);
+      
+      // Update weeks state
+      setWeeks(prev =>
+        prev.map(week => {
+          if (week.id === lectureData.weekId) {
+            return {
+              ...week,
+              lectures: [...week.lectures, newLecture],
+            };
+          }
+          return week;
+        })
+      );
+      
+      // Update courses state
+      setCourses(prev =>
+        prev.map(course => {
+          if (course.id === lectureData.courseId) {
+            return {
+              ...course,
+              weeks: course.weeks.map(week => {
+                if (week.id === lectureData.weekId) {
+                  return {
+                    ...week,
+                    lectures: [...week.lectures, newLecture],
+                  };
+                }
+                return week;
+              }),
+            };
+          }
+          return course;
+        })
+      );
+      
+      toast.success(`Lecture "${lectureData.title}" added successfully!`);
+      return newLecture;
+    } catch (error) {
+      console.error('Error adding lecture:', error);
+      toast.error('Failed to add lecture');
+      return null;
+    }
+  };
+
+  const updateLecture = async (updatedLecture: Lecture) => {
+    try {
+      const { error } = await supabase
+        .from('lectures')
+        .update({
+          title: updatedLecture.title,
+          youtube_id: updatedLecture.youtubeId,
+          scheduled_time: updatedLecture.scheduledTime,
+          description: updatedLecture.description,
+        })
+        .eq('id', updatedLecture.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update lectures state
+      setLectures(prev =>
+        prev.map(lecture => lecture.id === updatedLecture.id ? updatedLecture : lecture)
+      );
+      
+      // Update weeks state
+      setWeeks(prev =>
+        prev.map(week => {
+          if (week.id === updatedLecture.weekId) {
+            return {
+              ...week,
+              lectures: week.lectures.map(lecture => 
+                lecture.id === updatedLecture.id ? updatedLecture : lecture
+              ),
+            };
+          }
+          return week;
+        })
+      );
+      
+      // Update courses state
+      setCourses(prev =>
+        prev.map(course => {
+          if (course.id === updatedLecture.courseId) {
+            return {
+              ...course,
+              weeks: course.weeks.map(week => {
+                if (week.id === updatedLecture.weekId) {
+                  return {
+                    ...week,
+                    lectures: week.lectures.map(lecture => 
+                      lecture.id === updatedLecture.id ? updatedLecture : lecture
+                    ),
+                  };
+                }
+                return week;
+              }),
+            };
+          }
+          return course;
+        })
+      );
+      
+      toast.success(`Lecture "${updatedLecture.title}" updated successfully!`);
+    } catch (error) {
+      console.error('Error updating lecture:', error);
+      toast.error('Failed to update lecture');
+    }
+  };
+
+  const deleteLecture = async (id: string) => {
+    try {
+      // Find the lecture before deleting it
+      const lectureToDelete = lectures.find(lecture => lecture.id === id);
+      if (!lectureToDelete) return;
+      
+      const { error } = await supabase
+        .from('lectures')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update lectures state
+      setLectures(prev => prev.filter(lecture => lecture.id !== id));
+      
+      // Update weeks state
+      setWeeks(prev =>
+        prev.map(week => {
+          if (week.id === lectureToDelete.weekId) {
+            return {
+              ...week,
+              lectures: week.lectures.filter(lecture => lecture.id !== id),
+            };
+          }
+          return week;
+        })
+      );
+      
+      // Update courses state
+      setCourses(prev =>
+        prev.map(course => {
+          if (course.id === lectureToDelete.courseId) {
+            return {
+              ...course,
+              weeks: course.weeks.map(week => {
+                if (week.id === lectureToDelete.weekId) {
+                  return {
+                    ...week,
+                    lectures: week.lectures.filter(lecture => lecture.id !== id),
+                  };
+                }
+                return week;
+              }),
+            };
+          }
+          return course;
+        })
+      );
+      
+      toast.success('Lecture deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting lecture:', error);
+      toast.error('Failed to delete lecture');
+    }
   };
 
   const getLectureStatus = (lecture: Lecture): LectureStatus => {
@@ -409,15 +672,28 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const addRelationshipManager = async (data: { name: string; email: string }) => {
+    try {
+      const { error } = await supabase
+        .from('relationship_managers')
+        .insert([data]);
+        
+      if (error) throw error;
+      
+      await fetchRelationshipManagers();
+    } catch (error: any) {
+      console.error('Error adding relationship manager:', error);
+      throw new Error(error.message || 'Failed to add relationship manager');
+    }
+  };
+
   return (
     <ApiContext.Provider
       value={{
-        users,
         courses,
         lectures,
         weeks,
-        currentUser,
-        login,
+        currentUser: user,
         logout,
         addCourse,
         updateCourse,
@@ -432,6 +708,10 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getTimeUntilLecture,
         isAuthenticated,
         isAdmin,
+        isLoading,
+        relationshipManagers,
+        rmClients,
+        addRelationshipManager,
       }}
     >
       {children}

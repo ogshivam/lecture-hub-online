@@ -2,77 +2,53 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, TrendingUp, Users } from 'lucide-react';
-import MainLayout from '@/components/layout/MainLayout';
-import { useApi } from '@/contexts/ApiContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
-  const { isAuthenticated } = useApi();
+  const { user } = useAuth();
 
   return (
-    <MainLayout>
-      <div className="flex flex-col items-center justify-center py-10 text-center">
-        <div className="space-y-3 max-w-3xl">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl text-primary">
-            Financial Market Insights Platform
+    <div className="flex flex-col min-h-screen">
+      <header className="bg-background border-b">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2 font-bold text-xl text-primary">
+            <span>LectureHub</span>
+          </div>
+          <Button asChild>
+            <Link to={user ? "/dashboard" : "/auth"}>
+              {user ? "Go to Dashboard" : "Sign In"}
+            </Link>
+          </Button>
+        </div>
+      </header>
+      <main className="flex-1 grid place-items-center">
+        <div className="container mx-auto px-4 text-center space-y-8 py-16">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            Welcome to LectureHub
           </h1>
-          <p className="text-lg text-muted-foreground mb-8">
-            Access exclusive financial market analysis and investment strategy sessions
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+            Access live and recorded lectures from your educational courses
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-12 w-full max-w-5xl">
-          <Card className="border-2 border-primary/10">
-            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <BookOpen className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-semibold">Market Education</h3>
-              <p className="text-muted-foreground">
-                Learn stock market fundamentals and advanced trading strategies from industry experts
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-2 border-primary/10">
-            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-              <div className="p-3 rounded-full bg-primary/10 text-secondary">
-                <TrendingUp className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-semibold">Investment Analysis</h3>
-              <p className="text-muted-foreground">
-                Gain insights on market trends, mutual funds, and portfolio optimization techniques
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-2 border-primary/10">
-            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-              <div className="p-3 rounded-full bg-primary/10 text-accent">
-                <Users className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-semibold">Expert Guidance</h3>
-              <p className="text-muted-foreground">
-                Connect with dedicated relationship managers who provide personalized investment advice
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4 mt-4">
-          {isAuthenticated ? (
-            <Button asChild size="lg" className="text-lg py-6 px-8">
-              <Link to="/dashboard">Go to Dashboard</Link>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button asChild size="lg">
+              <Link to={user ? "/dashboard" : "/auth"}>
+                {user ? "Go to Dashboard" : "Get Started"}
+              </Link>
             </Button>
-          ) : (
-            <Button asChild size="lg" className="text-lg py-6 px-8">
-              <Link to="/login">Get Started</Link>
-            </Button>
-          )}
+            {!user && (
+              <Button asChild variant="outline" size="lg">
+                <Link to="/auth?tab=signup">Create Account</Link>
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-    </MainLayout>
+      </main>
+      <footer className="border-t py-6 md:py-8">
+        <div className="container text-center text-sm text-muted-foreground">
+          LectureHub &copy; {new Date().getFullYear()}
+        </div>
+      </footer>
+    </div>
   );
 };
 

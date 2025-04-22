@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Lecture } from '@/types';
 import { useApi } from '@/contexts/ApiContext';
@@ -31,6 +32,22 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     loading: true,
     fullscreen: false
   });
+
+  // Disable right click globally for the document
+  useEffect(() => {
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add the event listener to the document
+    document.addEventListener('contextmenu', disableContextMenu);
+
+    // Clean up the event listener when component unmounts
+    return () => {
+      document.removeEventListener('contextmenu', disableContextMenu);
+    };
+  }, []);
 
   useEffect(() => {
     // Load YouTube IFrame API
@@ -75,12 +92,6 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
       });
     };
 
-    // Prevent context menu on the player
-    const preventContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      return false;
-    };
-
     // Handle fullscreen change events
     const handleFullscreenChange = () => {
       const isFullscreen = Boolean(
@@ -93,7 +104,7 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
       setPlayerState(prev => ({ ...prev, fullscreen: isFullscreen }));
     };
 
-    containerRef.current?.addEventListener('contextmenu', preventContextMenu);
+    // Add event listeners
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -101,7 +112,6 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
 
     return () => {
       // Clean up event listeners
-      containerRef.current?.removeEventListener('contextmenu', preventContextMenu);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -169,6 +179,7 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
     <div 
       ref={containerRef} 
       className="youtube-container secure-player rounded-lg overflow-hidden border shadow-sm"
+      onContextMenu={(e) => e.preventDefault()}
     >
       {/* YouTube iframe - controlled by the API */}
       <div id="youtube-player"></div>
@@ -217,6 +228,7 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ lecture }) => {
         className="protection-overlay" 
         aria-hidden="true"
         title="This area is disabled for security"
+        onContextMenu={(e) => e.preventDefault()}
       />
     </div>
   );
