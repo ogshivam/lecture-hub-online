@@ -10,7 +10,7 @@ interface ApiContextProps {
   lectures: Lecture[];
   weeks: Week[];
   currentUser: User | null;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>; // Updated return type to Promise<boolean>
   logout: () => void;
   addCourse: (course: Omit<Course, 'id' | 'weeks'>) => Course;
   updateCourse: (course: Course) => void;

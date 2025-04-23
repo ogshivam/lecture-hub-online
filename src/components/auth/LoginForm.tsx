@@ -7,34 +7,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useApi();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast.error(error.message);
-      } else {
+      const success = await login(email, password);
+      
+      if (success) {
         toast.success('Login successful!');
         setTimeout(() => {
           navigate('/dashboard');
         }, 500);
       }
     } catch (error) {
-      toast.error('An error occurred during login');
+      // Error handling is done in the login function
     } finally {
       setIsLoading(false);
     }
