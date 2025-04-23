@@ -22,9 +22,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     return <Navigate to="/login" state={{ from: location }} />;
   }
 
+  // For prototype purposes, we're bypassing the admin check
+  // Comment this out if you want to enable real admin checking
+  /*
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" />;
   }
+  */
 
   return (
     <div className="min-h-screen flex flex-col">
