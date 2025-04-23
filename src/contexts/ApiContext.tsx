@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Course, Lecture, Week, LectureStatus } from '@/types';
-import { users as mockUsers, courses as mockCourses, lectures as mockLectures, weeks as mockWeeks } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface ApiContextProps {
   users: User[];
@@ -9,7 +10,7 @@ interface ApiContextProps {
   lectures: Lecture[];
   weeks: Week[];
   currentUser: User | null;
-  login: (username: string, password: string) => boolean;
+  login: (email: string, password: string) => boolean;
   logout: () => void;
   addCourse: (course: Omit<Course, 'id' | 'weeks'>) => Course;
   updateCourse: (course: Course) => void;
@@ -29,46 +30,97 @@ interface ApiContextProps {
 const ApiContext = createContext<ApiContextProps | undefined>(undefined);
 
 export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [courses, setCourses] = useState<Course[]>(mockCourses);
-  const [lectures, setLectures] = useState<Lecture[]>(mockLectures);
-  const [weeks, setWeeks] = useState<Week[]>(mockWeeks);
+  const [users, setUsers] = useState<User[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [lectures, setLectures] = useState<Lecture[]>([]);
+  const [weeks, setWeeks] = useState<Week[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check for existing session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setIsAdmin(user.role === 'admin');
-    }
-  }, []);
-
-  const login = (username: string, password: string) => {
-    const user = users.find(
-      (u) => u.username === username && u.password === password
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          setIsAuthenticated(true);
+          
+          // Get user profile data including admin status
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            setCurrentUser({
+              id: session.user.id,
+              username: profile.username,
+              role: profile.is_admin ? 'admin' : 'user',
+              password: '' // Not needed with Supabase auth
+            });
+            setIsAdmin(profile.is_admin);
+          }
+        } else {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+          setIsAdmin(false);
+        }
+      }
     );
 
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setIsAdmin(user.role === 'admin');
-      localStorage.setItem('currentUser', JSON.stringify(user));
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsAuthenticated(true);
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setCurrentUser({
+                id: session.user.id,
+                username: profile.username,
+                role: profile.is_admin ? 'admin' : 'user',
+                password: '' // Not needed with Supabase auth
+              });
+              setIsAdmin(profile.is_admin);
+            }
+          });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+
       return true;
+    } catch (error) {
+      toast.error('An error occurred during login');
+      return false;
     }
-    
-    return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
     setIsAuthenticated(false);
     setIsAdmin(false);
-    localStorage.removeItem('currentUser');
   };
 
   const addCourse = (courseData: Omit<Course, 'id' | 'weeks'>) => {
