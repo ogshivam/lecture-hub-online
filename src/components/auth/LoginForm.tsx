@@ -27,6 +27,7 @@ const LoginForm: React.FC = () => {
       if (success) {
         toast.success('Login successful!');
         setTimeout(() => {
+          // For prototype: redirect based solely on selected role
           navigate(role === 'admin' ? '/admin' : '/dashboard');
         }, 500);
       }
