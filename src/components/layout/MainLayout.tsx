@@ -2,7 +2,7 @@
 import React from 'react';
 import Navbar from './Navbar';
 import { useApi } from '@/contexts/ApiContext';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -16,19 +16,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   adminOnly = false
 }) => {
   const { isAuthenticated, isAdmin } = useApi();
-  const location = useLocation();
 
   if (requireAuth && !isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} />;
+    return <Navigate to="/login" />;
   }
 
-  // For prototype purposes, we're bypassing the admin check
-  // Comment this out if you want to enable real admin checking
-  /*
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" />;
   }
-  */
 
   return (
     <div className="min-h-screen flex flex-col">
