@@ -33,7 +33,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       </main>
       <footer className="py-6 border-t">
         <div className="container text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Online Coaching Platform
+          &copy; {new Date().getFullYear()} Online Coaching Platform Prototype
         </div>
       </footer>
     </div>
