@@ -1,19 +1,28 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useApi } from '@/contexts/ApiContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, Video, Plus, Edit, Trash2 } from 'lucide-react';
+import { BookOpen, Calendar, Video, Plus, Edit, Trash2, Users } from 'lucide-react';
 import AddCourseForm from '@/components/admin/AddCourseForm';
 import AddWeekForm from '@/components/admin/AddWeekForm';
 import AddLectureForm from '@/components/admin/AddLectureForm';
+import ReferralManagerPanel from '@/components/admin/ReferralManagerPanel';
 import LectureStatus from '@/components/lectures/LectureStatus';
 import { Link } from 'react-router-dom';
 
 const AdminPanel = () => {
-  const { courses, weeks, lectures, deleteLecture } = useApi();
+  const { 
+    courses, 
+    weeks, 
+    lectures, 
+    deleteLecture,
+    referralManagers,
+    referralLinks,
+    addReferralManager,
+    addReferralLink
+  } = useApi();
   const [activeTab, setActiveTab] = useState('courses');
 
   // Format date
@@ -58,7 +67,7 @@ const AdminPanel = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 mb-6 w-full md:w-auto">
+          <TabsList className="grid grid-cols-4 mb-6 w-full md:w-auto">
             <TabsTrigger value="courses" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               <span>Courses</span>
@@ -70,6 +79,10 @@ const AdminPanel = () => {
             <TabsTrigger value="lectures" className="flex items-center gap-2">
               <Video className="h-4 w-4" />
               <span>Lectures</span>
+            </TabsTrigger>
+            <TabsTrigger value="referrals" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Referrals</span>
             </TabsTrigger>
           </TabsList>
 
@@ -237,6 +250,16 @@ const AdminPanel = () => {
                 <AddLectureForm />
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="referrals" className="space-y-6">
+            <ReferralManagerPanel
+              referralManagers={referralManagers}
+              referralLinks={referralLinks}
+              lectures={lectures}
+              onAddReferralManager={addReferralManager}
+              onAddReferralLink={addReferralLink}
+            />
           </TabsContent>
         </Tabs>
       </div>

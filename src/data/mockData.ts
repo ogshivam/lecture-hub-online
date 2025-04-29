@@ -1,7 +1,30 @@
 import { User, Course, Week, Lecture } from '@/types';
 
+// Referral Manager types
+export interface ReferralManager {
+  rmId: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+export interface ReferralLink {
+  referralCode: string;
+  rmId: string;
+  lectureId: string;
+  created_at: string;
+}
+
+// Enhanced User type with referral info
+export interface UserWithReferral extends User {
+  referredBy?: {
+    rmId: string;
+    lectureId: string;
+  };
+}
+
 // Keep the existing users
-export const users: User[] = [
+export const users: UserWithReferral[] = [
   {
     id: '1',
     username: 'admin',
@@ -13,6 +36,38 @@ export const users: User[] = [
     username: 'user',
     password: 'user', // In production, this would be hashed
     role: 'user',
+  },
+];
+
+// Referral Managers
+export const referralManagers: ReferralManager[] = [
+  {
+    rmId: 'rm001',
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    created_at: new Date().toISOString(),
+  },
+  {
+    rmId: 'rm002',
+    name: 'Jane Smith',
+    email: 'jane.smith@example.com',
+    created_at: new Date().toISOString(),
+  },
+];
+
+// Referral Links
+export const referralLinks: ReferralLink[] = [
+  {
+    referralCode: 'rm001-l1',
+    rmId: 'rm001',
+    lectureId: 'l1',
+    created_at: new Date().toISOString(),
+  },
+  {
+    referralCode: 'rm002-l2',
+    rmId: 'rm002',
+    lectureId: 'l2',
+    created_at: new Date().toISOString(),
   },
 ];
 

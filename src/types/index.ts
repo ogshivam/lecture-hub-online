@@ -1,21 +1,21 @@
-
 export type UserRole = 'admin' | 'user';
 
 export interface User {
   id: string;
-  username: string;
-  password: string; // In a real app, this would be hashed
+  name: string;
+  email: string;
+  mobile: string;
   role: UserRole;
 }
 
 export interface Lecture {
   id: string;
+  title: string;
+  description: string;
   courseId: string;
   weekId: string;
-  title: string;
   youtubeId: string;
-  scheduledTime: string; // ISO string
-  description?: string;
+  scheduledTime: string;
 }
 
 export interface Week {
@@ -28,7 +28,7 @@ export interface Week {
 export interface Course {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   weeks: Week[];
 }
 

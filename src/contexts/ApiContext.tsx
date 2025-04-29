@@ -1,14 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Course, Lecture, Week, LectureStatus } from '@/types';
-import { users as mockUsers, courses as mockCourses, lectures as mockLectures, weeks as mockWeeks } from '@/data/mockData';
+import { users as mockUsers, courses as mockCourses, lectures as mockLectures, weeks as mockWeeks, referralManagers as mockReferralManagers, referralLinks as mockReferralLinks, ReferralManager, ReferralLink, UserWithReferral } from '@/data/mockData';
 import { toast } from 'sonner';
+import { getStoredReferralCode, clearStoredReferralCode } from '@/utils/referralUtils';
 
 interface ApiContextProps {
-  users: User[];
+  users: UserWithReferral[];
   courses: Course[];
   lectures: Lecture[];
   weeks: Week[];
-  currentUser: User | null;
+  referralManagers: ReferralManager[];
+  referralLinks: ReferralLink[];
+  currentUser: UserWithReferral | null;
   login: (username: string, password: string) => boolean;
   logout: () => void;
   addCourse: (course: Omit<Course, 'id' | 'weeks'>) => Course;
@@ -20,20 +23,25 @@ interface ApiContextProps {
   addLecture: (lecture: Omit<Lecture, 'id'>) => Lecture;
   updateLecture: (lecture: Lecture) => void;
   deleteLecture: (id: string) => void;
+  addReferralManager: (rm: Omit<ReferralManager, 'rmId' | 'created_at'>) => void;
+  addReferralLink: (link: Omit<ReferralLink, 'created_at'>) => void;
   getLectureStatus: (lecture: Lecture) => LectureStatus;
   getTimeUntilLecture: (lecture: Lecture) => string;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  createUser: (userData: { name: string; email: string; mobile: string; referralCode?: string }) => boolean;
 }
 
 const ApiContext = createContext<ApiContextProps | undefined>(undefined);
 
 export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<UserWithReferral[]>(mockUsers);
   const [courses, setCourses] = useState<Course[]>(mockCourses);
   const [lectures, setLectures] = useState<Lecture[]>(mockLectures);
   const [weeks, setWeeks] = useState<Week[]>(mockWeeks);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [referralManagers, setReferralManagers] = useState<ReferralManager[]>(mockReferralManagers);
+  const [referralLinks, setReferralLinks] = useState<ReferralLink[]>(mockReferralLinks);
+  const [currentUser, setCurrentUser] = useState<UserWithReferral | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -54,6 +62,21 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     if (user) {
+      // Check for referral code
+      const referralCode = getStoredReferralCode();
+      if (referralCode) {
+        const referralLink = referralLinks.find(link => link.referralCode === referralCode);
+        if (referralLink) {
+          user.referredBy = {
+            rmId: referralLink.rmId,
+            lectureId: referralLink.lectureId,
+          };
+          // Update user in the list
+          setUsers(users.map(u => u.id === user.id ? user : u));
+        }
+        clearStoredReferralCode();
+      }
+
       setCurrentUser(user);
       setIsAuthenticated(true);
       setIsAdmin(user.role === 'admin');
@@ -69,6 +92,25 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsAuthenticated(false);
     setIsAdmin(false);
     localStorage.removeItem('currentUser');
+  };
+
+  const addReferralManager = (rmData: Omit<ReferralManager, 'rmId' | 'created_at'>) => {
+    const newRm: ReferralManager = {
+      rmId: `rm${referralManagers.length + 1}`,
+      ...rmData,
+      created_at: new Date().toISOString(),
+    };
+
+    setReferralManagers([...referralManagers, newRm]);
+  };
+
+  const addReferralLink = (linkData: Omit<ReferralLink, 'created_at'>) => {
+    const newLink: ReferralLink = {
+      ...linkData,
+      created_at: new Date().toISOString(),
+    };
+
+    setReferralLinks([...referralLinks, newLink]);
   };
 
   const addCourse = (courseData: Omit<Course, 'id' | 'weeks'>) => {
@@ -364,6 +406,33 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const createUser = (userData: { name: string; email: string; mobile: string; referralCode?: string }) => {
+    // Check if email already exists
+    if (users.some(u => u.email === userData.email)) {
+      toast.error('Email already registered');
+      return false;
+    }
+
+    // Create new user
+    const newUser: UserWithReferral = {
+      id: `u${users.length + 1}`,
+      name: userData.name,
+      email: userData.email,
+      mobile: userData.mobile,
+      role: 'user',
+      // If there's a referral code, add the referral information
+      ...(userData.referralCode && {
+        referredBy: {
+          rmId: userData.referralCode.split('-')[0],
+          lectureId: userData.referralCode.split('-')[1],
+        },
+      }),
+    };
+
+    setUsers([...users, newUser]);
+    return true;
+  };
+
   return (
     <ApiContext.Provider
       value={{
@@ -371,6 +440,8 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         courses,
         lectures,
         weeks,
+        referralManagers,
+        referralLinks,
         currentUser,
         login,
         logout,
@@ -383,10 +454,13 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addLecture,
         updateLecture,
         deleteLecture,
+        addReferralManager,
+        addReferralLink,
         getLectureStatus,
         getTimeUntilLecture,
         isAuthenticated,
         isAdmin,
+        createUser,
       }}
     >
       {children}
